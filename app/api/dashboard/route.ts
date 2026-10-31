@@ -62,7 +62,7 @@ export async function GET() {
       open_positions: positions.length,
       total_trades: trades.length,
       win_rate: winRate,
-      agent_status: cfg.automation_enabled ? "scanning" : "idle",
+      agent_status: cfg.emergency_stop ? "stopped" : cfg.automation_enabled ? "scanning" : "idle",
     };
 
     return json({
@@ -70,6 +70,8 @@ export async function GET() {
       positions,
       recentTrades: trades.slice(0, 20),
       settings: cfg,
+      mode: cfg.mode,
+      emergency_stop: cfg.emergency_stop ?? false,
       ...services,
     });
   } catch (err) {

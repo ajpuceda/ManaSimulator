@@ -1,4 +1,5 @@
 export type TradeOutcome = "YES" | "NO";
+export type OperatingMode = "ANALYSIS_ONLY" | "DRY_RUN" | "LIVE";
 
 export interface ManifoldMarket {
   id: string;
@@ -31,6 +32,20 @@ export interface AiAnalysis {
   created_at: string;
 }
 
+export interface DecisionLog {
+  id: string;
+  market_id: string;
+  market_question: string;
+  mode: OperatingMode;
+  analysis: Record<string, unknown>;
+  metrics: Record<string, unknown>;
+  risk_checks: string[];
+  decision: "EXECUTE" | "SKIP" | "REJECTED";
+  reasons: string[];
+  execution_result?: string;
+  created_at: string;
+}
+
 export interface Position {
   id: string;
   market_id: string;
@@ -55,17 +70,22 @@ export interface Trade {
   amount_mana: number;
   price: number;
   result?: string;
+  idempotency_key?: string;
   created_at: string;
 }
 
 export interface BotSettings {
   user_id: string;
+  mode: OperatingMode;
   max_position_size: number;
   max_daily_allocation_pct: number;
   min_edge_pct: number;
   max_open_positions: number;
+  max_daily_loss_pct: number;
+  min_liquidity_mana: number;
   scan_interval_minutes: number;
   automation_enabled: boolean;
+  emergency_stop: boolean;
   dry_run: boolean;
   updated_at: string;
 }
@@ -79,7 +99,20 @@ export interface DashboardStats {
   open_positions: number;
   total_trades: number;
   win_rate: number;
-  agent_status: "idle" | "scanning" | "analyzing" | "disabled" | "error";
+  agent_status: "idle" | "scanning" | "analyzing" | "disabled" | "error" | "stopped";
+}
+
+export interface Analytics {
+  total_return: number;
+  daily_return: number;
+  weekly_return: number;
+  monthly_return: number;
+  win_rate: number;
+  avg_profit_per_trade: number;
+  avg_loss_per_trade: number;
+  max_drawdown: number;
+  total_trades: number;
+  ai_accuracy: number | null;
 }
 
 export interface ServiceStatus {

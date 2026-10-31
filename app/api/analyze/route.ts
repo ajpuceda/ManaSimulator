@@ -2,9 +2,7 @@ import { NextRequest } from "next/server";
 import { json, handleError } from "@/lib/api-helpers";
 import { getMarket } from "@/lib/manifold";
 import { analyzeMarket } from "@/lib/mistral";
-import { computeEdge } from "@/lib/engine";
 import { getSupabase } from "@/lib/supabase";
-import type { AiAnalysis } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -19,33 +17,38 @@ export async function POST(req: NextRequest) {
       question: market.question,
       description: market.description,
       marketProbability: market.probability,
+      liquidity: market.liquidity,
+      volume: market.volume,
+      closeTime: market.closeTime,
     });
-    const analysis: Omit<AiAnalysis, "id" | "created_at"> & { market_id: string } = {
+    const row = {
       market_id: market.id,
-      market_probability: market.probability,
-      ai_probability: result.ai_probability,
-      edge: computeEdge(market, { ...result } as AiAnalysis),
-      confidence: result.confidence,
-      expected_value: result.expected_value,
+      market_probability: result.market_probability,
+      ai_probability: result.estimated_probability_yes,
+      edge: result.estimated_edge * 100,
+      confidence: result.confidence_score,
+      expected_value: result.estimated_edge,
       risk_factors: result.risk_factors,
-      evidence: result.evidence,
-      recommendation: result.recommendation,
+      evidence: result.supporting_evidence,
+      recommendation:
+        result.recommended_action === "YES" ? "BUY_YES" :
+        result.recommended_action === "NO" ? "BUY_NO" : "HOLD",
       reasoning: result.reasoning,
     };
     try {
-      const { data, error } = await getSupabase()
-        .from("ai_analyses")
-        .insert(analysis)
-        .select()
-        .single();
+      const supabase = getSupabase();
+      const { data, error } = await supabase.from("ai_analyses").insert(row).select().single();
       if (error) console.error("[supabase] ai_analyses insert failed:", error.message);
-      return json({ analysis: data ?? { ...analysis, id: "local", created_at: new Date().toISOString() } });
+      await supabase.from("ai_predictions").insert({
+        market_id: market.id,
+        estimated_probability_yes: result.estimated_probability_yes,
+        confidence_score: result.confidence_score,
+        market_probability_at_prediction: market.probability,
+      });
+      return json({ analysis: data ?? { ...row, id: "local", created_at: new Date().toISOString() } });
     } catch (dbErr) {
       console.error("[supabase] unavailable, returning ephemeral analysis:", dbErr);
-      return json({
-        analysis: { ...analysis, id: "local", created_at: new Date().toISOString() },
-        persisted: false,
-      });
+      return json({ analysis: { ...row, id: "local", created_at: new Date().toISOString() }, persisted: false });
     }
   } catch (err) {
     return handleError(err);

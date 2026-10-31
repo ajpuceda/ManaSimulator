@@ -69,7 +69,34 @@ export default function SettingsPage() {
         {data.missing.length > 0 && <div className="mt-3"><SetupNotice missing={data.missing} /></div>}
       </Card>
 
-      <Card title="Trading parameters" subtitle="Dry-run enforced — no real Mana will be spent">
+      <Card title="Operating mode" subtitle="LIVE requires explicit confirmation">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {(["ANALYSIS_ONLY", "DRY_RUN", "LIVE"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={async () => {
+                const confirmLive = m === "LIVE" ? window.confirm("LIVE MANA mode executes REAL trades on Manifold. Confirm activation?") : true;
+                if (!confirmLive) return;
+                const r = await fetch("/api/control", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "set_mode", mode: m, confirmLive: confirmLive }),
+                });
+                if (r.ok) setForm((f) => ({ ...f, mode: m }));
+              }}
+              className={`rounded-lg border px-3 py-2.5 text-left text-sm transition-colors ${
+                form.mode === m ? "border-accent/60 bg-accent/10 text-accent" : "border-border bg-panel-2 text-muted hover:text-text"
+              }`}
+            >
+              {m === "ANALYSIS_ONLY" && "1 · Analysis only"}
+              {m === "DRY_RUN" && "2 · Dry run"}
+              {m === "LIVE" && "3 · LIVE MANA ⚠"}
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      <Card title="Trading parameters" subtitle="Defaults enforce conservative dry-run limits">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-muted">Max position size (Mana)</span>
@@ -86,6 +113,14 @@ export default function SettingsPage() {
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-muted">Max open positions</span>
             <input type="number" value={form.max_open_positions} onChange={num("max_open_positions")} className="rounded-lg border border-border bg-panel-2 px-3 py-2 outline-none focus:border-accent" />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-muted">Max daily loss (%)</span>
+            <input type="number" value={form.max_daily_loss_pct} onChange={num("max_daily_loss_pct")} className="rounded-lg border border-border bg-panel-2 px-3 py-2 outline-none focus:border-accent" />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-muted">Min market liquidity (Mana)</span>
+            <input type="number" value={form.min_liquidity_mana} onChange={num("min_liquidity_mana")} className="rounded-lg border border-border bg-panel-2 px-3 py-2 outline-none focus:border-accent" />
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-muted">Scan interval (minutes)</span>
@@ -109,7 +144,7 @@ export default function SettingsPage() {
             Save settings
           </button>
           {saved && <span className="text-sm text-profit">Saved.</span>}
-          <span className="text-xs text-muted">Mode: dry-run (read-only) — enforced server-side</span>
+          <span className="text-xs text-muted">Current mode: {form.mode ?? "DRY_RUN"}</span>
         </div>
       </Card>
     </div>

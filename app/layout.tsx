@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
+import ModeBanner from "@/components/ModeBanner";
 
 export const metadata: Metadata = {
   title: "ManaSimulator — AI Prediction Market Agent",
@@ -19,7 +20,10 @@ export default function RootLayout({
           <Sidebar />
           <div className="flex min-w-0 flex-1 flex-col">
             <Topbar />
-            <main className="fade-up min-w-0 flex-1 p-4 md:p-6">{children}</main>
+            <main className="fade-up min-w-0 flex-1 p-4 md:p-6">
+              <div className="mb-4"><ModeBanner /></div>
+              {children}
+            </main>
           </div>
         </div>
       </body>

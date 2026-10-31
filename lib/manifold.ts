@@ -1,7 +1,7 @@
 import "server-only";
 import { env } from "./env";
 import { fetchWithRetry, ApiError } from "./http";
-import type { ManifoldMarket } from "./types";
+import type { ManifoldMarket, TradeOutcome } from "./types";
 
 const API_BASE = "https://api.manifold.markets/v0";
 
@@ -80,4 +80,41 @@ export async function searchMarkets(query: string, limit = 50): Promise<Manifold
   if (!res.ok) throw new ApiError(`Manifold search failed: ${res.status}`, res.status);
   const data = (await res.json()) as RawMarket[];
   return data.filter((m) => !m.isResolved).map(toMarket);
+}
+
+export interface PlaceBetParams {
+  marketId: string;
+  outcome: TradeOutcome;
+  amount: number;
+  limitPrice?: number;
+  idempotencyKey: string;
+}
+
+export interface PlaceBetResult {
+  success: boolean;
+  betId?: string;
+  error?: string;
+}
+
+export async function placeBet(params: PlaceBetParams): Promise<PlaceBetResult> {
+  const res = await fetchWithRetry(
+    `${API_BASE}/bet`,
+    {
+      method: "POST",
+      headers: { ...headers(), "Idempotency-Key": params.idempotencyKey },
+      body: JSON.stringify({
+        contractId: params.marketId,
+        outcome: params.outcome,
+        amount: params.amount,
+        ...(params.limitPrice !== undefined ? { limitPrice: params.limitPrice } : {}),
+      }),
+    },
+    { retries: 2, timeoutMs: 30000 },
+  );
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    return { success: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
+  }
+  const data = (await res.json()) as { betId?: string; id?: string };
+  return { success: true, betId: data.betId ?? data.id };
 }

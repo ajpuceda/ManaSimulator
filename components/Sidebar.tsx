@@ -16,6 +16,7 @@ const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/markets", label: "Market Scanner", icon: Radar },
   { href: "/analysis", label: "AI Analysis", icon: BrainCircuit },
+  { href: "/decisions", label: "AI Decisions", icon: History },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
   { href: "/history", label: "Trading History", icon: History },
   { href: "/settings", label: "Settings", icon: Settings },
